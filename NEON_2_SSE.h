@@ -17108,4 +17108,29 @@ _NEON2SSESTORAGE float32x4_t vmlaq_laneq_f32(float32x4_t a, float32x4_t b, float
 _NEON2SSE_GLOBAL float32x4_t vfmaq_laneq_f32(float32x4_t a, float32x4_t b, float32x4_t v, const int lane);
 #define vfmaq_laneq_f32 vmlaq_laneq_f32
 
+// Define (overload) bitwise operators in C++ code for 128-bit SIMD types
+#ifdef __cplusplus
+    //#warning "GCC and Microsoft Compilers were tested only, operators overloading may not work as expected for other compilers"
+
+    _NEON2SSE_INLINE  __m128i operator|(const __m128i a, const __m128i b)
+    {
+        return _mm_or_si128(a, b);
+    }
+
+    _NEON2SSE_INLINE __m128i operator&(const __m128i a, const __m128i b)
+    {
+        return _mm_and_si128(a, b);
+    }
+
+    _NEON2SSE_INLINE __m128i operator^(const __m128i a, const __m128i b)
+    {
+        return _mm_xor_si128(a, b);
+    }
+
+    _NEON2SSE_INLINE __m128i operator~(const __m128i a)
+    {
+        return _mm_xor_si128(a, _mm_cmpeq_epi8(a, a)); // xor with 0xfff;
+    }
+#endif
+
 #endif /* NEON2SSE_H */
