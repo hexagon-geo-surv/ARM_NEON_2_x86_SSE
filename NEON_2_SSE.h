@@ -1260,7 +1260,7 @@ _NEON2SSE_GLOBAL int16x8_t vld1q_s16(__transfersize(8) int16_t const * ptr); // 
 _NEON2SSE_GLOBAL int32x4_t vld1q_s32(__transfersize(4) int32_t const * ptr); // VLD1.32 {d0, d1}, [r0]
 _NEON2SSE_GLOBAL int64x2_t vld1q_s64(__transfersize(2) int64_t const * ptr); // VLD1.64 {d0, d1}, [r0]
 _NEON2SSE_GLOBAL float16x8_t vld1q_f16(__transfersize(8) __fp16 const * ptr); // VLD1.16 {d0, d1}, [r0]
-_NEON2SSESTORAGE float32x4_t vld1q_f32(__transfersize(4) float32_t const * ptr); // VLD1.32 {d0, d1}, [r0]
+_NEON2SSE_GLOBAL float32x4_t vld1q_f32(__transfersize(4) float32_t const * ptr); // VLD1.32 {d0, d1}, [r0]
 _NEON2SSE_GLOBAL poly8x16_t vld1q_p8(__transfersize(16) poly8_t const * ptr); // VLD1.8 {d0, d1}, [r0]
 _NEON2SSE_GLOBAL poly16x8_t vld1q_p16(__transfersize(8) poly16_t const * ptr); // VLD1.16 {d0, d1}, [r0]
 _NEON2SSE_GLOBAL uint8x8_t vld1_u8(__transfersize(8) uint8_t const * ptr); // VLD1.8 {d0}, [r0]
@@ -1339,7 +1339,7 @@ _NEON2SSE_GLOBAL void vst1q_s16(__transfersize(8) int16_t * ptr, int16x8_t val);
 _NEON2SSE_GLOBAL void vst1q_s32(__transfersize(4) int32_t * ptr, int32x4_t val); // VST1.32 {d0, d1}, [r0]
 _NEON2SSE_GLOBAL void vst1q_s64(__transfersize(2) int64_t * ptr, int64x2_t val); // VST1.64 {d0, d1}, [r0]
 _NEON2SSE_GLOBAL void vst1q_f16(__transfersize(8) __fp16 * ptr, float16x8_t val); // VST1.16 {d0, d1}, [r0]
-_NEON2SSESTORAGE void vst1q_f32(__transfersize(4) float32_t * ptr, float32x4_t val); // VST1.32 {d0, d1}, [r0]
+_NEON2SSE_GLOBAL void vst1q_f32(__transfersize(4) float32_t * ptr, float32x4_t val); // VST1.32 {d0, d1}, [r0]
 _NEON2SSE_GLOBAL void vst1q_p8(__transfersize(16) poly8_t * ptr, poly8x16_t val); // VST1.8 {d0, d1}, [r0]
 _NEON2SSE_GLOBAL void vst1q_p16(__transfersize(8) poly16_t * ptr, poly16x8_t val); // VST1.16 {d0, d1}, [r0]
 _NEON2SSESTORAGE void vst1_u8(__transfersize(8) uint8_t * ptr, uint8x8_t val); // VST1.8 {d0}, [r0]
@@ -9419,12 +9419,15 @@ _NEON2SSE_GLOBAL poly16x8_t vsliq_n_p16(poly16x8_t a, poly16x8_t b, __constrange
 //Performs loads and stores of a single vector of some type.
 //*******************************  Loads ********************************************************
 // ***********************************************************************************************
-//We assume ptr is NOT aligned in general case and use __m128i _mm_loadu_si128 ((__m128i*) ptr);.
+//We assume ptr is NOT 16 bits aligned in general case and use __m128i _mm_loadu_si128 ((__m128i*) ptr);
+// As tested in 2026 even for older IA CPUs unaligned data load  for aligned data is faster than doing alignment check 
+// and using aligned load as below
+// #define LOAD_SI128(ptr) \
+//        ( ((uintptr_t)(ptr) & 15) == 0 ) ? _mm_load_si128((__m128i*)(ptr)) : _mm_loadu_si128((__m128i*)(ptr))
+// However if any performance problems seen you may use the load version above
 //also for SSE3  supporting systems the __m128i _mm_lddqu_si128 (__m128i const* p) usage for unaligned access may be advantageous.
-// it loads a 32-byte block aligned on a 16-byte boundary and extracts the 16 bytes corresponding to the unaligned access
-//If the ptr is aligned then could use __m128i _mm_load_si128 ((__m128i*) ptr) instead;
-#define LOAD_SI128(ptr) \
-        ( ((uintptr_t)(ptr) & 15) == 0 ) ? _mm_load_si128((__m128i*)(ptr)) : _mm_loadu_si128((__m128i*)(ptr))
+//If you are sure the ptr is aligned then you could use __m128i _mm_load_si128 ((__m128i*) ptr) directly
+#define LOAD_SI128(ptr)  _mm_loadu_si128((__m128i*)(ptr))
 
 _NEON2SSE_GLOBAL uint8x16_t vld1q_u8(__transfersize(16) uint8_t const * ptr); // VLD1.8 {d0, d1}, [r0]
 #define vld1q_u8 LOAD_SI128
@@ -9458,14 +9461,10 @@ __m128 f2;
 f2 = _mm_set_ps (ptr[7], ptr[6], ptr[5], ptr[4]);
 }*/
 
-_NEON2SSESTORAGE float32x4_t vld1q_f32(__transfersize(4) float32_t const * ptr); // VLD1.32 {d0, d1}, [r0]
-_NEON2SSE_INLINE float32x4_t vld1q_f32(__transfersize(4) float32_t const * ptr)
-{
-    if( (((uintptr_t)(ptr)) & 15 ) == 0 ) //16 bits aligned
-        return _mm_load_ps(ptr);
-    else
-        return _mm_loadu_ps(ptr);
-}
+//We assume ptr is NOT aligned in general case and use  _mm_loadu_ps
+// As tested in 2026 even for older IA CPUs unaligned data load  for aligned data is faster than doing alignment check 
+_NEON2SSE_GLOBAL float32x4_t vld1q_f32(__transfersize(4) float32_t const * ptr); // VLD1.32 {d0, d1}, [r0]
+#define vld1q_f32 _mm_loadu_ps
 
 _NEON2SSE_GLOBAL poly8x16_t vld1q_p8(__transfersize(16) poly8_t const * ptr); // VLD1.8 {d0, d1}, [r0]
 #define vld1q_p8  LOAD_SI128
@@ -9763,10 +9762,15 @@ _NEON2SSE_GLOBAL poly16x4_t vld1_dup_p16(__transfersize(1) poly16_t const * ptr)
 //*************************************************************************************
 //********************************* Store **********************************************
 //*************************************************************************************
-// If ptr is 16bit aligned and you  need to store data without cache pollution then use void _mm_stream_si128 ((__m128i*)ptr, val);
-//here we assume the case of  NOT 16bit aligned ptr possible. If it is aligned we could to use _mm_store_si128 like shown in the following macro
-#define STORE_SI128(ptr, val) \
-        (((uintptr_t)(ptr) & 15) == 0 ) ? _mm_store_si128 ((__m128i*)(ptr), val) : _mm_storeu_si128 ((__m128i*)(ptr), val);
+//We assume ptr is NOT 16 bits aligned in general case and use _mm_storeu_si128 ((__m128i*)(ptr), val)
+// As tested in 2026 even for older IA CPUs unaligned data store  for aligned data is faster than doing alignment check
+// and using aligned store as below
+// #define STORE_SI128(ptr, val) \
+//       (((uintptr_t)(ptr) & 15) == 0 ) ? _mm_store_si128 ((__m128i*)(ptr), val) : _mm_storeu_si128 ((__m128i*)(ptr), val);
+// If you are sure the ptr is aligned and you  need to store data without cache pollution then use  _mm_stream_si128 ((__m128i*)ptr, val) instead
+//If ptr is aligned and you need data to be cached, use _mm_store_si128 directly
+
+#define STORE_SI128(ptr, val)  _mm_storeu_si128 ((__m128i*)(ptr), val)
 
 _NEON2SSE_GLOBAL void vst1q_u8(__transfersize(16) uint8_t * ptr, uint8x16_t val); // VST1.8 {d0, d1}, [r0]
 #define vst1q_u8 STORE_SI128
@@ -9795,14 +9799,10 @@ _NEON2SSE_GLOBAL void vst1q_s64(__transfersize(2) int64_t * ptr, int64x2_t val);
 _NEON2SSE_GLOBAL void vst1q_f16(__transfersize(8) __fp16 * ptr, float16x8_t val); // VST1.16 {d0, d1}, [r0]
 // IA32 SIMD doesn't work with 16bit floats currently
 
-_NEON2SSESTORAGE void vst1q_f32(__transfersize(4) float32_t * ptr, float32x4_t val); // VST1.32 {d0, d1}, [r0]
-_NEON2SSE_INLINE void vst1q_f32(__transfersize(4) float32_t * ptr, float32x4_t val)
-{
-    if( ((uintptr_t)(ptr) & 15)  == 0 ) //16 bits aligned
-        _mm_store_ps (ptr, val);
-    else
-        _mm_storeu_ps (ptr, val);
-}
+//We assume ptr is NOT aligned in general case and use  _mm_storeu_ps
+// As tested in 2026 even for older IA CPUs unaligned data store  for aligned data is faster than doing alignment check 
+_NEON2SSE_GLOBAL void vst1q_f32(__transfersize(4) float32_t * ptr, float32x4_t val); // VST1.32 {d0, d1}, [r0]
+#define vst1q_f32  _mm_storeu_ps
 
 _NEON2SSE_GLOBAL void vst1q_p8(__transfersize(16) poly8_t * ptr, poly8x16_t val); // VST1.8 {d0, d1}, [r0]
 #define vst1q_p8  vst1q_u8
