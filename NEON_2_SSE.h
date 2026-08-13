@@ -2313,7 +2313,7 @@ _NEON2SSESTORAGE float64x2_t vrndnq_f64(float64x2_t a); // VRND.F64 q0,q0
 _NEON2SSE_GLOBAL float32x4_t vsqrtq_f32(float32x4_t a); // VSQRT.F32 q0,q0
 _NEON2SSE_GLOBAL float64x2_t vsqrtq_f64(float64x2_t a); // VSQRT.F64 q0,q0
 
-// A64 (ARM8+ instructions)
+// ************************  A64 (ARM8+ instructions) *********************************
 _NEON2SSESTORAGE int8_t vaddvq_s8(int8x16_t a);
 _NEON2SSESTORAGE int16_t vaddvq_s16(int16x8_t a);
 _NEON2SSESTORAGE int32_t vaddvq_s32(int32x4_t a);
@@ -2333,6 +2333,10 @@ _NEON2SSE_GLOBAL uint32_t vaddv_u32(uint32x2_t a);
 _NEON2SSESTORAGE float32_t vaddv_f32(float32x2_t a);
 
 _NEON2SSESTORAGE float32x4_t vmlaq_laneq_f32(float32x4_t a, float32x4_t b, float32x4_t v, const int lane);
+
+_NEON2SSESTORAGE float32x4_t vtrn1q_f32(float32x4_t a, float32x4_t b); // VTRN.32 d0,d0
+_NEON2SSESTORAGE float32x4_t vtrn2q_f32(float32x4_t a, float32x4_t b); // VTRN.32 d0,d0
+
 //^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // the following macros solve the problem of the "immediate parameters requirement" for some x86 intrinsics.
 // we need it to compile the code unless the "Intrinsic parameter must be an immediate value" error is our goal
@@ -17104,6 +17108,22 @@ _NEON2SSESTORAGE float32x4_t vmlaq_laneq_f32(float32x4_t a, float32x4_t b, float
 
 _NEON2SSE_GLOBAL float32x4_t vfmaq_laneq_f32(float32x4_t a, float32x4_t b, float32x4_t v, const int lane);
 #define vfmaq_laneq_f32 vmlaq_laneq_f32
+
+_NEON2SSESTORAGE float32x4_t vtrn1q_f32(float32x4_t a, float32x4_t b); // VTRN.32 d0,d0
+_NEON2SSE_INLINE float32x4_t vtrn1q_f32(float32x4_t a, float32x4_t b)
+{
+    __m128 ab_sh;
+    ab_sh = _mm_shuffle_ps(a, b, _MM_SHUFFLE(2, 0, 2, 0)); //a0, a2, b0, b2
+    return _mm_shuffle_ps(ab_sh, ab_sh, _MM_SHUFFLE(3, 1, 2, 0)); //a0, b0, a2, b2
+}
+
+_NEON2SSESTORAGE float32x4_t vtrn2q_f32(float32x4_t a, float32x4_t b); // VTRN.32 d0,d0
+_NEON2SSE_INLINE float32x4_t vtrn2q_f32(float32x4_t a, float32x4_t b)
+{
+    __m128 ab_sh;
+    ab_sh = _mm_shuffle_ps(a, b, _MM_SHUFFLE(3, 1, 3, 1)); //a1, a3, b1, b3
+    return _mm_shuffle_ps(ab_sh, ab_sh, _MM_SHUFFLE(3, 1, 2, 0)); //a1, b1, a3, b3
+}
 
 // Define (overload) bitwise operators in C++ code for 128-bit SIMD types
 #ifdef __cplusplus
